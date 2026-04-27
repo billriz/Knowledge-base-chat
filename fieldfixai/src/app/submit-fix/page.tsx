@@ -1,5 +1,7 @@
 "use client";
 
+import { supabase } from "@/lib/supabaseClient";
+
 import { useState } from "react";
 import {
   Wrench,
@@ -32,11 +34,31 @@ export default function SubmitFix() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("Submitted Fix:", form);
-    alert("Fix submitted — database connection coming next.");
-  };
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+
+  const { error } = await supabase.from("field_fixes").insert([
+    {
+      manufacturer: form.manufacturer,
+      model_number: form.modelNumber,
+      serial_number: form.serialNumber,
+      error_code: form.errorCode,
+      symptom: form.symptom,
+      root_cause: form.rootCause,
+      solution: form.solution,
+      parts_used: form.partsUsed,
+      notes: form.notes,
+    },
+  ]);
+
+  if (error) {
+    console.error(error);
+    alert("There was an error saving the fix.");
+    return;
+  }
+
+  alert("Fix saved successfully.");
+};
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-6">
