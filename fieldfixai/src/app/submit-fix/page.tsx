@@ -24,7 +24,8 @@ export default function SubmitFix() {
     symptom: "",
     rootCause: "",
     solution: "",
-    partsUsed: "",
+    partName: "",
+    partNumber: "",
     notes: "",
   });
 
@@ -46,14 +47,14 @@ export default function SubmitFix() {
       symptom: form.symptom,
       root_cause: form.rootCause,
       solution: form.solution,
-      parts_used: form.partsUsed,
+      parts_used: `${form.partName} (${form.partNumber})`,
       notes: form.notes,
     },
   ]);
 
   if (error) {
-    console.error(error);
-    alert("There was an error saving the fix.");
+    console.error("Supabase insert error:", error);
+    alert(error.message);
     return;
   }
 
@@ -169,14 +170,31 @@ export default function SubmitFix() {
               onChange={handleChange}
             />
 
-            <input
-              name="partsUsed"
-              placeholder="Parts used"
-              value={form.partsUsed}
-              className={fieldClass}
-              onChange={handleChange}
-            />
-          </div>
+            {/* Parts */}
+<div>
+  <div className="mb-3 flex items-center gap-2">
+    <Wrench className="h-5 w-5 text-blue-600" />
+    <h2 className="text-lg font-bold text-slate-900">
+      Parts Used (if any)
+    </h2>
+  </div>
+
+  <input
+    name="partName"
+    placeholder="Part Name / Description"
+    value={form.partName}
+    className={`${fieldClass} mb-3`}
+    onChange={handleChange}
+  />
+
+  <input
+    name="partNumber"
+    placeholder="Part Number"
+    value={form.partNumber}
+    className={fieldClass}
+    onChange={handleChange}
+  />
+</div>
 
           {/* Notes */}
           <div>
