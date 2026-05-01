@@ -1,17 +1,38 @@
-// @ts-ignore
-const pdfParse = require('pdf-parse');
+/* eslint-disable @typescript-eslint/no-var-requires */
 import * as mammoth from 'mammoth';
-import { generateEmbedding } from './embeddings';
+
+const canvasImplementation = (() => {
+  try {
+    return require('canvas');
+  } catch {
+    return null;
+  }
+})();
+
+if (canvasImplementation) {
+  if (typeof globalThis.DOMMatrix === 'undefined' && canvasImplementation.DOMMatrix) {
+    globalThis.DOMMatrix = canvasImplementation.DOMMatrix;
+  }
+  if (typeof globalThis.ImageData === 'undefined' && canvasImplementation.ImageData) {
+    globalThis.ImageData = canvasImplementation.ImageData;
+  }
+  if (typeof globalThis.Path2D === 'undefined' && canvasImplementation.Path2D) {
+    globalThis.Path2D = canvasImplementation.Path2D;
+  }
+}
+
+const pdfParseModule = require('pdf-parse');
+const pdfParse = pdfParseModule.default || pdfParseModule;
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    // Use pdf-parse library
     const data = await pdfParse(buffer);
     const text = data.text || '';
-    
+
     if (!text || text.trim().length === 0) {
       throw new Error('PDF contains no readable text');
     }
+
     return text;
   } catch (error) {
     console.error('Error parsing PDF:', error);
