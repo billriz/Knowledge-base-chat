@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import * as mammoth from 'mammoth';
 
 const canvasImplementation = (() => {
@@ -21,23 +21,35 @@ if (canvasImplementation) {
   }
 }
 
+type PdfParseConstructor = new (options: {
+  data: Buffer | Uint8Array | ArrayBuffer;
+}) => {
+  getText(): Promise<{ text: string }>;
+};
+
+type PdfParseModule = {
+  PDFParse?: PdfParseConstructor;
+  default?: { PDFParse?: PdfParseConstructor };
+};
+
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    // Dynamic import to avoid bundler issues with pdf-parse
-    const { PDFParse } = await import('pdf-parse');
+    const pdfParseModule = (await import('pdf-parse')) as PdfParseModule;
+    const PDFParse = pdfParseModule.PDFParse ?? pdfParseModule.default?.PDFParse;
 
-    // Disable worker for Node.js environment
-    PDFParse.setWorker(null);
+    if (typeof PDFParse !== 'function') {
+      throw new Error('Unable to load PDF parser implementation');
+    }
 
-    const parser = new PDFParse({ data: buffer });
-    const result = await parser.getText();
-    const text = result.text || '';
+    const pdfParser = new PDFParse({ data: buffer });
+    const pdfData = await pdfParser.getText();
+    const text = String(pdfData?.text ?? '');
 
-    if (!text || text.trim().length === 0) {
+    if (!text.trim()) {
       throw new Error('PDF contains no readable text. This may be an image-only PDF or scanned document.');
     }
 
-    return text;
+    return text.trim();
   } catch (error) {
     console.error('Error parsing PDF:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to parse PDF';
