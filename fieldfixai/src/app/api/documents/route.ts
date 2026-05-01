@@ -19,6 +19,15 @@ async function getDocumentProcessor() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check for required environment variables
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('Missing OPENAI_API_KEY environment variable');
+      return NextResponse.json(
+        { error: 'Server configuration error: Missing API key' },
+        { status: 500 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -45,18 +54,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert file to buffer
-    const buffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(buffer);
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     // Extract text from file
     let text: string;
     try {
       const { extractTextFromFile } = await getDocumentProcessor();
-      text = await extractTextFromFile(uint8Array as any, file.type);
+      text = await extractTextFromFile(buffer, file.type);
     } catch (error) {
-      console.error('Error extracting text:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error extracting text:', errorMessage);
       return NextResponse.json(
-        { error: 'Failed to process file' },
+        { error: `Failed to process file: ${errorMessage}` },
         { status: 400 }
       );
     }

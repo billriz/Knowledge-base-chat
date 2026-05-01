@@ -5,11 +5,18 @@ import { generateEmbedding } from './embeddings';
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
+    // Use pdf-parse library
     const data = await pdfParse(buffer);
-    return data.text;
+    const text = data.text || '';
+    
+    if (!text || text.trim().length === 0) {
+      throw new Error('PDF contains no readable text');
+    }
+    return text;
   } catch (error) {
     console.error('Error parsing PDF:', error);
-    throw new Error('Failed to parse PDF');
+    const errorMessage = error instanceof Error ? error.message : 'Failed to parse PDF';
+    throw new Error(`PDF parsing failed: ${errorMessage}`);
   }
 }
 
@@ -57,5 +64,3 @@ export function chunkText(text: string, chunkSize: number = 1000, overlap: numbe
 
   return chunks.filter(chunk => chunk.trim().length > 0);
 }
-
-export { generateEmbedding } from './embeddings';

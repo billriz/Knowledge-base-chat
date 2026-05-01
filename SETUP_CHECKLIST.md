@@ -78,9 +78,9 @@ npm install    # Verify dependencies
 npm run build  # Test build
 npm run dev    # Start server
 ```
-- [ ] `npm install` completes without errors
-- [ ] `npm run build` shows "✓ Compiled successfully"
-- [ ] `npm run dev` shows "ready - started server on 0.0.0.0:3000"
+- [X]`npm install` completes without errors
+- [X] `npm run build` shows "✓ Compiled successfully"
+- [X] `npm run dev` shows "ready - started server on 0.0.0.0:3000"
 
 ### Open in Browser
 - [ ] Open http://localhost:3000
