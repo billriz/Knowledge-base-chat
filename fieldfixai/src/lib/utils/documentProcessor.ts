@@ -21,13 +21,13 @@ if (canvasImplementation) {
   }
 }
 
-const pdfParseModule = require('pdf-parse');
-const pdfParse = pdfParseModule.default || pdfParseModule;
+const { PDFParse } = require('pdf-parse');
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const data = await pdfParse(buffer);
-    const text = data.text || '';
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    const text = result.text || '';
 
     if (!text || text.trim().length === 0) {
       throw new Error('PDF contains no readable text');
