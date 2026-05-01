@@ -21,16 +21,20 @@ if (canvasImplementation) {
   }
 }
 
-const { PDFParse } = require('pdf-parse');
-
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
+    // Dynamic import to avoid bundler issues with pdf-parse
+    const { PDFParse } = await import('pdf-parse');
+
+    // Disable worker for Node.js environment
+    PDFParse.setWorker(null);
+
     const parser = new PDFParse({ data: buffer });
     const result = await parser.getText();
     const text = result.text || '';
 
     if (!text || text.trim().length === 0) {
-      throw new Error('PDF contains no readable text');
+      throw new Error('PDF contains no readable text. This may be an image-only PDF or scanned document.');
     }
 
     return text;
