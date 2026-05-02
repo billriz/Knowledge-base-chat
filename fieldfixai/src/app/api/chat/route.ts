@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseServer } from '@/lib/supabaseServer';
 import { generateEmbedding } from '@/lib/utils/embeddings';
 
 const SIMILARITY_THRESHOLD = 0.7;
 const NUM_RESULTS = 5;
+
+type SimilarChunk = {
+  chunk_text: string;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Search for similar chunks using vector similarity
-    const { data: similarChunks, error: searchError } = await supabase.rpc(
+    const { data: similarChunks, error: searchError } = await supabaseServer.rpc(
       'search_document_chunks',
       {
         embedding: messageEmbedding,
@@ -41,7 +45,7 @@ export async function POST(request: NextRequest) {
     let context = '';
     if (!searchError && similarChunks && similarChunks.length > 0) {
       context = similarChunks
-        .map((chunk: any) => chunk.chunk_text)
+        .map((chunk: SimilarChunk) => chunk.chunk_text)
         .join('\n\n---\n\n');
     }
 
@@ -81,7 +85,7 @@ export async function POST(request: NextRequest) {
     const assistantMessage = openaiResponse.choices[0].message.content;
 
     // Save chat history
-    const { error: historyError } = await supabase
+    const { error: historyError } = await supabaseServer
       .from('chat_history')
       .insert([
         { message, role: 'user' },
@@ -107,7 +111,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const { data: history, error } = await supabase
+    const { data: history, error } = await supabaseServer
       .from('chat_history')
       .select('*')
       .order('created_at', { ascending: true })

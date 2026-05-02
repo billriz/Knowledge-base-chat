@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseServer } from '@/lib/supabaseServer';
 import { generateEmbedding } from '@/lib/utils/embeddings';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert document record
-    const { data: docData, error: docError } = await supabase
+    const { data: docData, error: docError } = await supabaseServer
       .from('documents')
       .insert({
         file_name: file.name,
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     if (docError) {
       console.error('Database error:', docError);
       return NextResponse.json(
-        { error: 'Failed to save document' },
+        { error: `Failed to save document: ${docError.message}` },
         { status: 500 }
       );
     }
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (chunkRecords.length > 0) {
-      const { error: chunksError } = await supabase
+      const { error: chunksError } = await supabaseServer
         .from('document_chunks')
         .insert(chunkRecords);
 
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const { data: documents, error } = await supabase
+    const { data: documents, error } = await supabaseServer
       .from('documents')
       .select('*')
       .order('created_at', { ascending: false });

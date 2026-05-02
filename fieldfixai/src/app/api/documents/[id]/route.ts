@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseServer } from '@/lib/supabaseServer';
 
 export async function DELETE(
   request: NextRequest,
@@ -9,14 +9,15 @@ export async function DELETE(
     const { id } = await params;
 
     // Delete associated chunks first (cascaded by database)
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseServer
       .from('documents')
       .delete()
       .eq('id', id);
 
     if (deleteError) {
+      console.error('Error deleting document:', deleteError);
       return NextResponse.json(
-        { error: 'Failed to delete document' },
+        { error: `Failed to delete document: ${deleteError.message}` },
         { status: 500 }
       );
     }
