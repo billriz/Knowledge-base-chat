@@ -25,31 +25,49 @@ type PdfParseConstructor = new (options: {
   data: Buffer | Uint8Array | ArrayBuffer;
 }) => {
   getText(): Promise<{ text: string }>;
+  destroy?(): Promise<void>;
 };
 
 type PdfParseModule = {
-  PDFParse?: PdfParseConstructor;
-  default?: { PDFParse?: PdfParseConstructor };
+  PDFParse?: PdfParseConstructor & { setWorker?: (workerSrc: string) => string };
+  default?: { PDFParse?: PdfParseConstructor & { setWorker?: (workerSrc: string) => string } };
+};
+
+type PdfParseWorkerModule = {
+  getData?: () => string;
+  default?: { getData?: () => string };
 };
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
     const pdfParseModule = (await import('pdf-parse')) as PdfParseModule;
     const PDFParse = pdfParseModule.PDFParse ?? pdfParseModule.default?.PDFParse;
+    const pdfWorkerModule = (await import('pdf-parse/worker')) as PdfParseWorkerModule;
+    const getWorkerData = pdfWorkerModule.getData ?? pdfWorkerModule.default?.getData;
 
     if (typeof PDFParse !== 'function') {
       throw new Error('Unable to load PDF parser implementation');
     }
 
-    const pdfParser = new PDFParse({ data: buffer });
-    const pdfData = await pdfParser.getText();
-    const text = String(pdfData?.text ?? '');
-
-    if (!text.trim()) {
-      throw new Error('PDF contains no readable text. This may be an image-only PDF or scanned document.');
+    if (typeof getWorkerData !== 'function') {
+      throw new Error('Unable to load PDF worker implementation');
     }
 
-    return text.trim();
+    PDFParse.setWorker?.(getWorkerData());
+
+    const pdfParser = new PDFParse({ data: buffer });
+    try {
+      const pdfData = await pdfParser.getText();
+      const text = String(pdfData?.text ?? '');
+
+      if (!text.trim()) {
+        throw new Error('PDF contains no readable text. This may be an image-only PDF or scanned document.');
+      }
+
+      return text.trim();
+    } finally {
+      await pdfParser.destroy?.();
+    }
   } catch (error) {
     console.error('Error parsing PDF:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to parse PDF';
