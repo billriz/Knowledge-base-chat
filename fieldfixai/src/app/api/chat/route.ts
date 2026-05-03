@@ -11,6 +11,24 @@ type SimilarChunk = {
 
 export async function POST(request: NextRequest) {
   try {
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      console.error('Missing OPENAI_API_KEY environment variable');
+      return NextResponse.json(
+        { error: 'Server configuration error: Missing OpenAI API key' },
+        { status: 500 }
+      );
+    }
+
+    if (!apiKey.startsWith('sk-')) {
+      console.error('Invalid OPENAI_API_KEY format');
+      return NextResponse.json(
+        { error: 'Server configuration error: OpenAI API key must start with "sk-"' },
+        { status: 500 }
+      );
+    }
+
     const { message } = await request.json();
 
     if (!message) {
@@ -20,30 +38,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate embedding for user message
-    let messageEmbedding: number[];
+    let similarChunks: SimilarChunk[] = [];
+
+    // Generate an embedding for document search. If this fails for a transient
+    // reason, continue the chat without knowledge-base context.
     try {
-      messageEmbedding = await generateEmbedding(message);
-    } catch (error) {
-      console.error('Error generating embedding:', error);
-      return NextResponse.json(
-        { error: 'Failed to process message' },
-        { status: 500 }
+      const messageEmbedding = await generateEmbedding(message);
+      const { data, error: searchError } = await supabaseServer.rpc(
+        'search_document_chunks',
+        {
+          embedding: messageEmbedding,
+          similarity_threshold: SIMILARITY_THRESHOLD,
+          limit: NUM_RESULTS,
+        }
       );
+
+      if (searchError) {
+        console.error('Error searching document chunks:', searchError);
+      } else {
+        similarChunks = data ?? [];
+      }
+    } catch (error) {
+      console.error('Error preparing document context:', error);
     }
 
-    // Search for similar chunks using vector similarity
-    const { data: similarChunks, error: searchError } = await supabaseServer.rpc(
-      'search_document_chunks',
-      {
-        embedding: messageEmbedding,
-        similarity_threshold: SIMILARITY_THRESHOLD,
-        limit: NUM_RESULTS,
-      }
-    );
-
     let context = '';
-    if (!searchError && similarChunks && similarChunks.length > 0) {
+    if (similarChunks.length > 0) {
       context = similarChunks
         .map((chunk: SimilarChunk) => chunk.chunk_text)
         .join('\n\n---\n\n');
@@ -59,10 +79,10 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: process.env.OPENAI_CHAT_MODEL ?? 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message },
@@ -73,10 +93,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => null);
       console.error('OpenAI API error:', error);
+      const message =
+        error?.error?.message ?? response.statusText ?? 'Unknown OpenAI API error';
       return NextResponse.json(
-        { error: 'Failed to generate response' },
+        { error: `Failed to generate response: ${message}` },
         { status: 500 }
       );
     }

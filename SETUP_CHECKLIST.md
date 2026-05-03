@@ -83,25 +83,25 @@ npm run dev    # Start server
 - [X] `npm run dev` shows "ready - started server on 0.0.0.0:3000"
 
 ### Open in Browser
-- [ ] Open http://localhost:3000
-- [ ] See FieldFix AI home page with two cards
-- [ ] Cards say "Chat with Your Knowledge Base" and "Manage Documents"
+- [x] Open http://localhost:3000
+- [X] See FieldFix AI home page with two cards
+- [X] Cards say "Chat with Your Knowledge Base" and "Manage Documents"
 
 ## Phase 5: Test Document Upload (5 minutes)
 
 ### Upload a Test Document
-- [ ] Click "Manage Documents" button
-- [ ] Create a test file (e.g., `test.txt` with some content)
-- [ ] Click upload area or drag file
-- [ ] Click "Upload" button
-- [ ] See success message with chunk count
-- [ ] Document appears in the list below
+- [x] Click "Manage Documents" button
+- [x] Create a test file (e.g., `test.txt` with some content)
+- [x] Click upload area or drag file
+- [x] Click "Upload" button
+- [x] See success message with chunk count
+- [x] Document appears in the list below
 
 ### Test Multiple Formats (Optional)
-- [ ] Try uploading a PDF
-- [ ] Try uploading a Word document (.docx)
-- [ ] Try uploading markdown file (.md)
-- [ ] All should show in document list
+- [X] Try uploading a PDF
+- [x] Try uploading a Word document (.docx)
+- [x] Try uploading markdown file (.md)
+- [x] All should show in document list
 
 ## Phase 6: Test Chatbot (5 minutes)
 
