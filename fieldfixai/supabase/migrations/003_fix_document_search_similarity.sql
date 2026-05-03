@@ -1,5 +1,12 @@
--- Create the search_document_chunks RPC function
-CREATE OR REPLACE FUNCTION search_document_chunks(
+-- Fix document search retrieval.
+--
+-- pgvector's <=> operator returns cosine distance, where smaller is better.
+-- Convert it to cosine similarity with 1 - distance so the 0.7 threshold can
+-- actually match relevant chunks. Also avoid naming the query embedding
+-- parameter "embedding", because that conflicts with document_chunks.embedding.
+DROP FUNCTION IF EXISTS search_document_chunks(vector, float, int);
+
+CREATE FUNCTION search_document_chunks(
   query_embedding vector(1536),
   similarity_threshold float DEFAULT 0.7,
   result_limit int DEFAULT 5

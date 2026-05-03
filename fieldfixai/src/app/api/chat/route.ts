@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
       const { data, error: searchError } = await supabaseServer.rpc(
         'search_document_chunks',
         {
-          embedding: messageEmbedding,
+          query_embedding: messageEmbedding,
           similarity_threshold: SIMILARITY_THRESHOLD,
-          limit: NUM_RESULTS,
+          result_limit: NUM_RESULTS,
         }
       );
 
