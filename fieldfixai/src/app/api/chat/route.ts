@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { generateEmbedding } from '@/lib/utils/embeddings';
 
-const SIMILARITY_THRESHOLD = 0.7;
+const SIMILARITY_THRESHOLD = 0.5;
+const FALLBACK_SIMILARITY_THRESHOLD = 0.25;
 const NUM_RESULTS = 5;
 
 type SimilarChunk = {
+  document_id: string;
   chunk_text: string;
+  similarity: number;
+};
+
+type DocumentSource = {
+  id: string;
+  file_name: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -39,40 +47,66 @@ export async function POST(request: NextRequest) {
     }
 
     let similarChunks: SimilarChunk[] = [];
+    let sources: DocumentSource[] = [];
 
     // Generate an embedding for document search. If this fails for a transient
     // reason, continue the chat without knowledge-base context.
     try {
       const messageEmbedding = await generateEmbedding(message);
-      const { data, error: searchError } = await supabaseServer.rpc(
-        'search_document_chunks',
-        {
+      const searchChunks = (similarityThreshold: number) =>
+        supabaseServer.rpc('search_document_chunks', {
           query_embedding: messageEmbedding,
-          similarity_threshold: SIMILARITY_THRESHOLD,
+          similarity_threshold: similarityThreshold,
           result_limit: NUM_RESULTS,
-        }
-      );
+        });
+
+      let { data, error: searchError } = await searchChunks(SIMILARITY_THRESHOLD);
+
+      if (!searchError && (!data || data.length === 0)) {
+        ({ data, error: searchError } = await searchChunks(FALLBACK_SIMILARITY_THRESHOLD));
+      }
 
       if (searchError) {
         console.error('Error searching document chunks:', searchError);
       } else {
         similarChunks = data ?? [];
+
+        const documentIds = [...new Set(similarChunks.map((chunk) => chunk.document_id))];
+        if (documentIds.length > 0) {
+          const { data: documents, error: documentsError } = await supabaseServer
+            .from('documents')
+            .select('id, file_name')
+            .in('id', documentIds);
+
+          if (documentsError) {
+            console.error('Error loading source documents:', documentsError);
+          } else {
+            sources = documents ?? [];
+          }
+        }
       }
     } catch (error) {
       console.error('Error preparing document context:', error);
     }
 
+    const sourceNameById = new Map(
+      sources.map((source) => [source.id, source.file_name])
+    );
+
     let context = '';
     if (similarChunks.length > 0) {
       context = similarChunks
-        .map((chunk: SimilarChunk) => chunk.chunk_text)
+        .map((chunk: SimilarChunk) => {
+          const sourceName = sourceNameById.get(chunk.document_id) ?? 'Uploaded document';
+          return `Source: ${sourceName}\n${chunk.chunk_text}`;
+        })
         .join('\n\n---\n\n');
     }
 
     // Prepare system prompt with context
     const systemPrompt = context
-      ? `You are a helpful AI assistant for a knowledge base. Use the following documents to answer questions:\n\n${context}`
-      : 'You are a helpful AI assistant for a knowledge base.';
+      ? `You are a helpful AI assistant for a knowledge base. Answer using the uploaded document excerpts below. When the excerpts contain the answer, do not say you lack access to documents. Mention the source file name when useful.\n\n${context}`
+      : 'You are a helpful AI assistant for a knowledge base. No uploaded document excerpts matched this question, so say that before giving general guidance.';
 
     // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -121,6 +155,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: assistantMessage,
       contextsUsed: similarChunks?.length || 0,
+      sources,
     });
   } catch (error) {
     console.error('Error in chat:', error);

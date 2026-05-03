@@ -21,6 +21,9 @@
 /.next/
 /out/
 
+# supabase
+/supabase/.temp/
+
 # production
 /build
 

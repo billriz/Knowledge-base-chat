@@ -8,6 +8,10 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   created_at: string;
   contextsUsed?: number;
+  sources?: Array<{
+    id: string;
+    file_name: string;
+  }>;
 }
 
 export function useChat() {
@@ -55,6 +59,7 @@ export function useChat() {
           role: 'assistant',
           created_at: new Date().toISOString(),
           contextsUsed: data.contextsUsed,
+          sources: data.sources,
         };
         setMessages((prev) => [...prev, assistantMessage]);
 

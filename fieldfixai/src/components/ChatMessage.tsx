@@ -24,9 +24,15 @@ export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
           {message.message}
         </p>
         {message.contextsUsed !== undefined && !isUser && (
-          <p className="text-xs mt-1 opacity-75">
-            Used {message.contextsUsed} source(s)
-          </p>
+          <div className="mt-2 space-y-1 text-xs opacity-75">
+            <p>Used {message.contextsUsed} source(s)</p>
+            {message.sources && message.sources.length > 0 && (
+              <p>
+                Sources:{' '}
+                {message.sources.map((source) => source.file_name).join(', ')}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>
