@@ -32,6 +32,19 @@ export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
                 {message.sources.map((source) => source.file_name).join(', ')}
               </p>
             )}
+            {message.excerpts && message.excerpts.length > 0 && (
+              <details className="pt-1">
+                <summary className="cursor-pointer">Matched excerpts</summary>
+                <div className="mt-1 space-y-2">
+                  {message.excerpts.slice(0, 2).map((excerpt, index) => (
+                    <div key={`${excerpt.source}-${index}`}>
+                      <p className="font-semibold">{excerpt.source}</p>
+                      <p className="whitespace-pre-wrap">{excerpt.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
         )}
       </div>

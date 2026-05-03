@@ -12,6 +12,10 @@ export interface ChatMessage {
     id: string;
     file_name: string;
   }>;
+  excerpts?: Array<{
+    source: string;
+    text: string;
+  }>;
 }
 
 export function useChat() {
@@ -60,6 +64,7 @@ export function useChat() {
           created_at: new Date().toISOString(),
           contextsUsed: data.contextsUsed,
           sources: data.sources,
+          excerpts: data.excerpts,
         };
         setMessages((prev) => [...prev, assistantMessage]);
 

@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
 
     // Generate embeddings and insert chunks
     const chunkRecords = [];
+    let failedChunks = 0;
     for (let i = 0; i < chunks.length; i++) {
       try {
         const embedding = await generateEmbedding(chunks[i]);
@@ -118,8 +119,22 @@ export async function POST(request: NextRequest) {
         });
       } catch (error) {
         console.error(`Error generating embedding for chunk ${i}:`, error);
-        // Continue with next chunk
+        failedChunks += 1;
       }
+    }
+
+    if (chunkRecords.length === 0) {
+      await supabaseServer.from('documents').delete().eq('id', docData.id);
+
+      return NextResponse.json(
+        {
+          error:
+            failedChunks > 0
+              ? 'Failed to index document: embeddings could not be generated'
+              : 'Failed to index document: no text chunks were created',
+        },
+        { status: 500 }
+      );
     }
 
     if (chunkRecords.length > 0) {
@@ -129,6 +144,12 @@ export async function POST(request: NextRequest) {
 
       if (chunksError) {
         console.error('Error inserting chunks:', chunksError);
+        await supabaseServer.from('documents').delete().eq('id', docData.id);
+
+        return NextResponse.json(
+          { error: `Failed to index document: ${chunksError.message}` },
+          { status: 500 }
+        );
       }
     }
 
